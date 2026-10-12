@@ -31,12 +31,26 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;display:none;z-index:20}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#tick{position:fixed;inset:0;display:none;place-items:center;z-index:30;pointer-events:none}
+#tick.show{display:grid}
+#tick div{background:#fff;border-radius:20px;padding:22px 32px;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center;font-weight:600;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+#tick svg{width:64px;height:64px;display:block;margin:0 auto 8px}
+#tick circle{fill:none;stroke:var(--ok);stroke-width:3;stroke-dasharray:160;stroke-dashoffset:160;animation:dr .5s .05s forwards}
+#tick path{fill:none;stroke:var(--ok);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:48;stroke-dashoffset:48;animation:dr .35s .45s forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shake .4s}
+dialog[open]{animation:pop .25s}
+.first .cat{animation:fadein .45s both}
+.btn{transition:transform .1s,opacity .2s}.btn:active{transform:scale(.95)}.btn:disabled{opacity:.6}
+.row{transition:opacity .25s}
 </style></head><body>
 
 <div id="login" hidden>
   <h1>Admin panel</h1><div style="color:var(--muted);font-size:13px">Moxridin osh markazi</div>
-  <label>Email</label><input id="em" type="email" autocomplete="username">
-  <label>Parol</label><input id="pw" type="password" autocomplete="current-password">
+  <label>Parol</label><input id="pw" type="password" autocomplete="current-password" autofocus>
   <div class="err" id="lerr"></div>
   <button class="btn y" style="width:100%;margin-top:8px" id="lbtn">Kirish</button>
 </div>
@@ -63,9 +77,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <button type="button" class="btn g" id="cancel">Bekor</button><button type="button" class="btn y" id="save">Saqlash</button></div>
 </form></dialog>
 <div id="toast"></div>
+<div id="tick"></div>
 
 <script>
 const SB_URL='https://zlvqrhxjbiekapljcrfy.supabase.co';
+const ADMIN_EMAIL='akobirqochqorov07@gmail.com';
 const SB_KEY='sb_publishable_9w9lENUUUYGvObeVFzEvEw_-47njYV6';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const $=id=>document.getElementById(id);
@@ -74,6 +90,7 @@ const money=n=>String(n).replace(/\B(?=(\d{3})+$)/g,' ')+" so'm";
 let cats=[],items=[],edit=null,file=null,rmImg=false;
 
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2500)}
+function ok(m){const t=$('tick');t.innerHTML='<div><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg>'+esc(m)+'</div>';t.classList.add('show');clearTimeout(ok.h);ok.h=setTimeout(()=>t.classList.remove('show'),1400)}
 async function run(p){const {error,data}=await p;if(error){toast('Xato: '+error.message);throw error}return data}
 
 async function init(){
@@ -81,12 +98,12 @@ async function init(){
   if(!session)return showLogin();
   const {data}=await sb.from('admins').select('user_id').eq('user_id',session.user.id).maybeSingle();
   if(!data){await sb.auth.signOut();showLogin("Bu akkauntga admin ruxsati berilmagan");return}
-  $('login').hidden=true;$('app').hidden=false;load();
+  $('login').hidden=true;$('app').hidden=false;document.body.classList.add('first');setTimeout(()=>document.body.classList.remove('first'),700);load();
 }
 function showLogin(m){$('app').hidden=true;$('login').hidden=false;$('lerr').textContent=m||''}
 $('lbtn').onclick=async()=>{
-  const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
-  if(error)return $('lerr').textContent="Email yoki parol noto'g'ri";
+  const {error}=await sb.auth.signInWithPassword({email:ADMIN_EMAIL,password:$('pw').value});
+  if(error){$('lerr').textContent="Parol noto'g'ri";const l=$('login');l.classList.remove('shake');void l.offsetWidth;l.classList.add('shake');$('pw').select();return}
   init();
 };
 $('pw').onkeydown=e=>{if(e.key==='Enter')$('lbtn').click()};
@@ -125,14 +142,14 @@ $('list').onclick=async e=>{
   const a=b.dataset.a,it=items.find(x=>x.id===b.dataset.i),c=cats.find(x=>x.id===b.dataset.c);
   if(a==='add')openForm(null,c.id);
   if(a==='edit')openForm(it);
-  if(a==='tog'){await run(sb.from('items').update({available:!it.available}).eq('id',it.id));load()}
-  if(a==='del'&&confirm(`"${it.name}" o'chirilsinmi? Qaytarib bo'lmaydi.`)){await delImg(it.image_url);await run(sb.from('items').delete().eq('id',it.id));load()}
+  if(a==='tog'){await run(sb.from('items').update({available:!it.available}).eq('id',it.id));ok(it.available?'Yashirildi':'Saytda ko\'rinadi');load()}
+  if(a==='del'&&confirm(`"${it.name}" o'chirilsinmi? Qaytarib bo'lmaydi.`)){await delImg(it.image_url);await run(sb.from('items').delete().eq('id',it.id));ok("O'chirildi");load()}
   if(a==='up'||a==='dn')move(items.filter(x=>x.category_id===it.category_id),it,a==='up'?-1:1,'items');
   if(a==='cup'||a==='cdn')move(cats,c,a==='cup'?-1:1,'categories');
-  if(a==='ren'){const n=prompt('Kategoriya nomi:',c.name);if(n&&n.trim()){await run(sb.from('categories').update({name:n.trim()}).eq('id',c.id));load()}}
+  if(a==='ren'){const n=prompt('Kategoriya nomi:',c.name);if(n&&n.trim()){await run(sb.from('categories').update({name:n.trim()}).eq('id',c.id));ok('Saqlandi');load()}}
   if(a==='cdel'&&confirm(`"${c.name}" va ichidagi barcha ovqatlar o'chirilsinmi?`)){
     for(const x of items.filter(x=>x.category_id===c.id))await delImg(x.image_url);
-    await run(sb.from('categories').delete().eq('id',c.id));load()}
+    await run(sb.from('categories').delete().eq('id',c.id));ok("O'chirildi");load()}
 };
 async function move(arr,o,d,table){
   const i=arr.findIndex(x=>x.id===o.id),j=i+d;if(j<0||j>=arr.length)return;
@@ -141,7 +158,7 @@ async function move(arr,o,d,table){
 }
 $('addcat').onclick=async()=>{
   const n=prompt('Yangi kategoriya nomi:');if(!n||!n.trim())return;
-  await run(sb.from('categories').insert({id:'c'+Date.now().toString(36),name:n.trim(),sort:cats.length}));load();
+  await run(sb.from('categories').insert({id:'c'+Date.now().toString(36),name:n.trim(),sort:cats.length}));ok("Kategoriya qo'shildi");load();
 };
 
 function openForm(it,catId){
@@ -180,7 +197,7 @@ $('save').onclick=async()=>{
       category_id:$('c').value,available:$('a').checked,image_url};
     if(edit)await run(sb.from('items').update(row).eq('id',edit.id));
     else{row.sort=items.filter(x=>x.category_id===row.category_id).length;await run(sb.from('items').insert(row))}
-    $('dlg').close();toast('Saqlandi ✓');load();
+    $('dlg').close();ok('Saqlandi');load();
   }catch(e){$('ferr').textContent='Saqlab bo\'lmadi. Qayta urinib ko\'ring.'}
   $('save').disabled=false;
 };
