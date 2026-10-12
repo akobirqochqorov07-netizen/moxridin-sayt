@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Admin · Moxridin osh markazi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--brand:#F7B614;--ink:#1B1608;--bg:#FBF8F0;--line:#E8E0CA;--muted:#6F6650;--err:#B3261E;--ok:#2E7D32}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit}
+.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--ink);color:#fff;cursor:pointer;font-weight:600}
+.btn.y{background:var(--brand);color:var(--ink)}.btn.g{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.r{background:#fff;color:var(--err);border:1px solid var(--line)}
+.btn.s{padding:6px 10px;font-size:13px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+#login{max-width:340px;margin:12vh auto;padding:24px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(70,50,0,.12)}
+#login h1{margin:0 0 6px;font-size:20px}
+header{position:sticky;top:0;z-index:5;background:var(--brand);padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header b{font-size:17px;flex:1}header input{max-width:220px}
+main{max-width:860px;margin:0 auto;padding:16px}
+.cat{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+.cat>h2{margin:0;padding:12px 14px;font-size:16px;background:#F4EDDA;display:flex;gap:8px;align-items:center}
+.cat>h2 span{flex:1}
+.row{display:flex;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.row.off{opacity:.55}
+.th{width:56px;height:56px;border-radius:10px;background:#FFF6DA;object-fit:cover;flex:none;display:grid;place-items:center;font-size:11px;color:var(--muted);text-align:center}
+.info{flex:1;min-width:0}.info b{display:block}.info small{color:var(--muted)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tag{font-size:11px;background:var(--brand);border-radius:6px;padding:1px 6px;margin-left:6px}
+dialog{border:0;border-radius:16px;padding:20px;width:min(480px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+#prev{width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:6px}
+.err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;display:none;z-index:20}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style></head><body>
+
+<div id="login" hidden>
+  <h1>Admin panel</h1><div style="color:var(--muted);font-size:13px">Moxridin osh markazi</div>
+  <label>Email</label><input id="em" type="email" autocomplete="username">
+  <label>Parol</label><input id="pw" type="password" autocomplete="current-password">
+  <div class="err" id="lerr"></div>
+  <button class="btn y" style="width:100%;margin-top:8px" id="lbtn">Kirish</button>
+</div>
+
+<div id="app" hidden>
+  <header><b>Menyu boshqaruvi</b><input id="q" placeholder="Qidirish…">
+    <button class="btn" id="addcat">+ Kategoriya</button><button class="btn g" id="out">Chiqish</button></header>
+  <main id="list"></main>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="f" onsubmit="return false">
+  <h3 id="dt" style="margin:0 0 4px"></h3>
+  <label>Nomi</label><input id="n" required>
+  <label>Tavsif</label><textarea id="d" rows="2"></textarea>
+  <div class="two"><div><label>Og'irligi / porsiya</label><input id="w" placeholder="450 g"></div>
+  <div><label>Narxi (so'm)</label><input id="p" type="number" min="0" step="500"></div></div>
+  <div class="two"><div><label>Kategoriya</label><select id="c"></select></div>
+  <div><label>Belgi</label><select id="t"><option value="">Yo'q</option><option value="hit">Hit</option><option value="new">Yangi</option></select></div></div>
+  <label>Rasm</label><input id="img" type="file" accept="image/*">
+  <img id="prev" hidden><button type="button" class="btn r s" id="rmimg" style="margin-top:6px" hidden>Rasmni olib tashlash</button>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="a" type="checkbox" style="width:auto" checked> Saytda ko'rinsin (mavjud)</label>
+  <div class="err" id="ferr"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+    <button type="button" class="btn g" id="cancel">Bekor</button><button type="button" class="btn y" id="save">Saqlash</button></div>
+</form></dialog>
+<div id="toast"></div>
+
+<script>
+const SB_URL='https://zlvqrhxjbiekapljcrfy.supabase.co';
+const SB_KEY='sb_publishable_9w9lENUUUYGvObeVFzEvEw_-47njYV6';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const money=n=>String(n).replace(/\B(?=(\d{3})+$)/g,' ')+" so'm";
+let cats=[],items=[],edit=null,file=null,rmImg=false;
+
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2500)}
+async function run(p){const {error,data}=await p;if(error){toast('Xato: '+error.message);throw error}return data}
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)return showLogin();
+  const {data}=await sb.from('admins').select('user_id').eq('user_id',session.user.id).maybeSingle();
+  if(!data){await sb.auth.signOut();showLogin("Bu akkauntga admin ruxsati berilmagan");return}
+  $('login').hidden=true;$('app').hidden=false;load();
+}
+function showLogin(m){$('app').hidden=true;$('login').hidden=false;$('lerr').textContent=m||''}
+$('lbtn').onclick=async()=>{
+  const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+  if(error)return $('lerr').textContent="Email yoki parol noto'g'ri";
+  init();
+};
+$('pw').onkeydown=e=>{if(e.key==='Enter')$('lbtn').click()};
+$('out').onclick=async()=>{await sb.auth.signOut();showLogin()};
+
+async function load(){
+  cats=await run(sb.from('categories').select('*').order('sort'));
+  items=await run(sb.from('items').select('*').order('sort'));
+  render();
+}
+$('q').oninput=render;
+function render(){
+  const q=$('q').value.trim().toLowerCase();
+  $('list').innerHTML=cats.map(c=>{
+    const all=items.filter(i=>i.category_id===c.id);
+    const its=all.filter(i=>!q||(i.name+' '+(i.description||'')).toLowerCase().includes(q));
+    if(q&&!its.length)return'';
+    return `<section class="cat"><h2><span>${esc(c.name)} <small style="color:var(--muted)">(${all.length})</small></span>
+      <button class="btn y s" data-a="add" data-c="${c.id}">+ Ovqat</button>
+      <button class="btn g s" data-a="ren" data-c="${c.id}">Nomi</button>
+      <button class="btn g s" data-a="cup" data-c="${c.id}">↑</button><button class="btn g s" data-a="cdn" data-c="${c.id}">↓</button>
+      <button class="btn r s" data-a="cdel" data-c="${c.id}">O'chirish</button></h2>
+      ${its.map(i=>`<div class="row ${i.available?'':'off'}">
+        ${i.image_url?`<img class="th" src="${esc(i.image_url)}" alt="">`:`<div class="th">rasm yo'q</div>`}
+        <div class="info"><b>${esc(i.name)}${i.tag?`<span class="tag">${i.tag==='hit'?'Hit':'Yangi'}</span>`:''}</b>
+          <small>${esc(i.weight)} · ${money(i.price)}${i.available?'':' · <span style="color:var(--err)">tugagan</span>'}</small></div>
+        <div class="acts">
+          <button class="btn g s" data-a="up" data-i="${i.id}">↑</button><button class="btn g s" data-a="dn" data-i="${i.id}">↓</button>
+          <button class="btn g s" data-a="tog" data-i="${i.id}">${i.available?'Tugadi':'Qaytarish'}</button>
+          <button class="btn g s" data-a="edit" data-i="${i.id}">Tahrirlash</button>
+          <button class="btn r s" data-a="del" data-i="${i.id}">✕</button></div></div>`).join('')}
+      ${all.length?'':'<div class="row" style="color:var(--muted)">Bu kategoriyada ovqat yo\'q</div>'}</section>`}).join('');
+}
+$('list').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const a=b.dataset.a,it=items.find(x=>x.id===b.dataset.i),c=cats.find(x=>x.id===b.dataset.c);
+  if(a==='add')openForm(null,c.id);
+  if(a==='edit')openForm(it);
+  if(a==='tog'){await run(sb.from('items').update({available:!it.available}).eq('id',it.id));load()}
+  if(a==='del'&&confirm(`"${it.name}" o'chirilsinmi? Qaytarib bo'lmaydi.`)){await delImg(it.image_url);await run(sb.from('items').delete().eq('id',it.id));load()}
+  if(a==='up'||a==='dn')move(items.filter(x=>x.category_id===it.category_id),it,a==='up'?-1:1,'items');
+  if(a==='cup'||a==='cdn')move(cats,c,a==='cup'?-1:1,'categories');
+  if(a==='ren'){const n=prompt('Kategoriya nomi:',c.name);if(n&&n.trim()){await run(sb.from('categories').update({name:n.trim()}).eq('id',c.id));load()}}
+  if(a==='cdel'&&confirm(`"${c.name}" va ichidagi barcha ovqatlar o'chirilsinmi?`)){
+    for(const x of items.filter(x=>x.category_id===c.id))await delImg(x.image_url);
+    await run(sb.from('categories').delete().eq('id',c.id));load()}
+};
+async function move(arr,o,d,table){
+  const i=arr.findIndex(x=>x.id===o.id),j=i+d;if(j<0||j>=arr.length)return;
+  const list=arr.slice();[list[i],list[j]]=[list[j],list[i]];
+  await Promise.all(list.map((x,k)=>sb.from(table).update({sort:k}).eq('id',x.id)));load();
+}
+$('addcat').onclick=async()=>{
+  const n=prompt('Yangi kategoriya nomi:');if(!n||!n.trim())return;
+  await run(sb.from('categories').insert({id:'c'+Date.now().toString(36),name:n.trim(),sort:cats.length}));load();
+};
+
+function openForm(it,catId){
+  edit=it;file=null;rmImg=false;$('ferr').textContent='';$('img').value='';
+  $('dt').textContent=it?'Ovqatni tahrirlash':"Yangi ovqat qo'shish";
+  $('c').innerHTML=cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('n').value=it?.name||'';$('d').value=it?.description||'';$('w').value=it?.weight||'';
+  $('p').value=it?.price??'';$('t').value=it?.tag||'';$('c').value=it?.category_id||catId;$('a').checked=it?it.available:true;
+  setPrev(it?.image_url);$('dlg').showModal();
+}
+function setPrev(u){$('prev').hidden=!u;$('rmimg').hidden=!u;if(u)$('prev').src=u}
+$('cancel').onclick=()=>$('dlg').close();
+$('img').onchange=async e=>{const f=e.target.files[0];if(!f)return;file=await shrink(f);rmImg=false;setPrev(URL.createObjectURL(file))};
+$('rmimg').onclick=()=>{file=null;rmImg=true;$('img').value='';setPrev(null)};
+function shrink(f){return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{
+  const s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');
+  c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  c.toBlob(b=>ok(b),'image/jpeg',.82)};im.onerror=()=>no();im.src=URL.createObjectURL(f)})}
+const pathOf=u=>u&&u.split('/menu-images/')[1];
+async function delImg(u){const p=pathOf(u);if(p)await sb.storage.from('menu-images').remove([p])}
+
+$('save').onclick=async()=>{
+  const name=$('n').value.trim(),price=parseInt($('p').value,10);
+  if(!name)return $('ferr').textContent='Nomini kiriting';
+  if(isNaN(price)||price<0)return $('ferr').textContent="Narxni to'g'ri kiriting";
+  $('save').disabled=true;
+  try{
+    let image_url=edit?.image_url||null;
+    if(file){
+      const path=Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
+      await run(sb.storage.from('menu-images').upload(path,file,{contentType:'image/jpeg'}));
+      await delImg(image_url);
+      image_url=sb.storage.from('menu-images').getPublicUrl(path).data.publicUrl;
+    }else if(rmImg){await delImg(image_url);image_url=null}
+    const row={name,description:$('d').value.trim(),weight:$('w').value.trim(),price,tag:$('t').value,
+      category_id:$('c').value,available:$('a').checked,image_url};
+    if(edit)await run(sb.from('items').update(row).eq('id',edit.id));
+    else{row.sort=items.filter(x=>x.category_id===row.category_id).length;await run(sb.from('items').insert(row))}
+    $('dlg').close();toast('Saqlandi ✓');load();
+  }catch(e){$('ferr').textContent='Saqlab bo\'lmadi. Qayta urinib ko\'ring.'}
+  $('save').disabled=false;
+};
+init();
+</script></body></html>
