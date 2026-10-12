@@ -263,6 +263,39 @@ fieldset{border:0;padding:0;margin:0}
 .demo{background:var(--sunk);border-radius:14px;padding:12px 14px;font-size:.86rem;color:var(--muted);text-align:left}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}.rv{opacity:1;transform:none}.tick .ic{stroke-dashoffset:0}}
+
+/* filial tanlash */
+.bchip{display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;border:2px solid var(--brand);font-weight:700;font-size:.9rem;background:var(--surface);white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.bchip .ic{width:18px;height:18px;color:var(--hot)}
+.bchip:hover{background:var(--brand-soft)}
+@media (max-width:560px){.logo small{display:none}.bchip{padding:8px 11px;font-size:.82rem}}
+.bp{position:fixed;inset:0;z-index:80;background:var(--bg);overflow:auto;display:flex;flex-direction:column;animation:bpin .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes bpin{from{opacity:0;transform:scale(1.03)}}
+.bp .in{max-width:760px;width:100%;margin:auto;padding:22px 18px 30px}
+.bp h2{font-size:clamp(1.3rem,4.4vw,2rem);font-weight:800}
+.bp .sub{color:var(--muted);margin:8px 0 14px}
+.bmap{width:100%;height:auto;border-radius:22px;background:var(--pic);border:1px solid var(--line);box-shadow:var(--shadow-sm);touch-action:manipulation}
+.bmap .land{fill:var(--brand-soft);stroke:var(--brand-deep);stroke-width:2;stroke-dasharray:3 6}
+.bmap .rt{fill:none;stroke:var(--blue);stroke-width:2;stroke-dasharray:6 8;opacity:.55;animation:rtm 1.4s linear infinite}
+@keyframes rtm{to{stroke-dashoffset:-14}}
+.bmap .pin{cursor:pointer;outline:none}
+.bmap .ring{fill:var(--hot);opacity:.25;transform-box:fill-box;transform-origin:center;animation:ringp 2s ease-out infinite}
+@keyframes ringp{from{transform:scale(.6);opacity:.45}to{transform:scale(2.4);opacity:0}}
+.bmap .dot{fill:var(--hot);stroke:#fff;stroke-width:3;transition:transform .25s;transform-box:fill-box;transform-origin:center}
+.bmap .pin:hover .dot,.bmap .pin:focus-visible .dot,.bmap .pin.on .dot{transform:scale(1.35);fill:var(--ink)}
+.bmap .lbl{font:800 17px var(--display);fill:var(--fg);paint-order:stroke;stroke:var(--pic);stroke-width:5px}
+.bmap .tag{font:600 11px var(--body);fill:var(--muted);letter-spacing:.14em}
+.bcards{display:grid;gap:10px;margin-top:14px}
+.bcard{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:14px 16px;border-radius:16px;background:var(--surface);border:2px solid var(--line);transition:border-color .2s,transform .2s,box-shadow .2s}
+.bcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.bcard.on{border-color:var(--brand);background:var(--brand-soft)}
+.bcard b{display:block;font-family:var(--display);font-size:1rem}
+.bcard small{color:var(--muted)}
+.bcard .go{margin-left:auto;background:var(--brand);color:var(--on-brand);border-radius:999px;padding:9px 16px;font-weight:700;white-space:nowrap}
+.bnear{margin-top:14px;width:100%}
+.bsel{display:flex;align-items:center;gap:10px;background:var(--brand-soft);border:1px solid var(--brand);border-radius:14px;padding:10px 12px;margin-bottom:14px;font-size:.92rem}
+.bsel div{flex:1;min-width:0}.bsel small{color:var(--muted);display:block}
+.bsel button{font-weight:700;text-decoration:underline;white-space:nowrap}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -345,6 +378,7 @@ fieldset{border:0;padding:0;margin:0}
   <div class="dfoot" id="dfoot"></div>
 </aside>
 
+<div class="bp" id="bpick" hidden></div>
 <script>
 // ====== Sozlamalar: shu yerni o'zgartirasiz ======
 const CFG = { phone:"+998 00 000-00-00", address:"Manzil kiritilmagan", hours:"Har kuni 06:00 – 23:00" };
@@ -490,6 +524,7 @@ function renderDrawer(errs={}){
     $("dtitle").textContent="Ma'lumotlaringiz";
     const d=form.type==="delivery";
     b.innerHTML=stepsBar(2)+`<form id="ofrm" novalidate>
+      <div class="bsel">${ic("pin")}<div><b>${esc(branch?branch.name:"Filial tanlanmagan")} filiali</b><small>${branch?branch.ph:""}</small></div><button type="button" data-bpick>O'zgartirish</button></div>
       ${fld("f-name","F.I.Sh.",form.name,"user",'autocomplete="name" placeholder="Familiya Ism Sharif"',errs.name)}
       ${fld("f-phone","Telefon raqam",form.phone,"phone",'type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123-45-67"',errs.phone)}
       <fieldset class="f"><legend>Buyurtma turi</legend><div class="seg">
@@ -497,7 +532,7 @@ function renderDrawer(errs={}){
         <label><input type="radio" name="type" id="t-pick" value="pickup" ${d?"":"checked"}>${ic("bag")}Olib ketish</label></div></fieldset>
       ${d?fld("f-addr","Manzil",form.addr,"pin",'autocomplete="street-address" placeholder="Tuman, ko\'cha, uy raqami"',errs.addr)+
         `<div class="two">${fld("f-flat","Xonadon / qavat",form.flat,"",'placeholder="12-xonadon"')}${fld("f-land","Mo'ljal",form.land,"",'placeholder="Maktab yonida"')}</div>`
-        :`<p class="note">Olib ketish manzili: ${esc(CFG.address)}</p>`}
+        :`<p class="note">Olib ketish: ${esc(branch?branch.name:"")} filiali · ${esc(branch?branch.ph:"")}</p>`}
       <fieldset class="f"><legend>To'lov usuli</legend><div class="seg">
         <label><input type="radio" name="pay" id="p-cash" value="cash" ${form.pay==="cash"?"checked":""}>${ic("cash")}Naqd</label>
         <label><input type="radio" name="pay" id="p-card" value="card" ${form.pay==="card"?"checked":""}>${ic("card")}Karta orqali</label></div></fieldset>
@@ -512,7 +547,7 @@ function renderDrawer(errs={}){
       ${o.type==="delivery"?`<div><span>Manzil</span><span>${esc([o.addr,o.flat,o.land].filter(Boolean).join(", "))}</span></div>`:""}
       <div><span>To'lov</span><span>${o.pay==="cash"?"Naqd":"Karta orqali"}</span></div>
       <div class="tot"><span>Jami</span><span class="num">${sum(o.total)}</span></div></div>
-      <p class="demo">Namuna rejimi: sayt hali restoran tizimiga ulanmagan, shuning uchun bu buyurtma hech qayerga yuborilmadi.</p></div>`;
+      <p class="demo">Filial: ${esc(o.branch.name)} · <a href="tel:${o.branch.phone}">${esc(o.branch.ph)}</a></p></div>`;
     f.innerHTML=`<button class="btn brand block" data-close>Menyuga qaytish</button>`;
   }
 }
@@ -522,15 +557,6 @@ function fmtPhone(v){let d=v.replace(/\D/g,""); if(!d.startsWith("998")) d="998"
   let o="+998"; if(r.length)o+=" "+r.slice(0,2); if(r.length>2)o+=" "+r.slice(2,5); if(r.length>5)o+="-"+r.slice(5,7); if(r.length>7)o+="-"+r.slice(7,9); return r.length?o:"+998 ";}
 function openD(){ $("drawer").hidden=false;$("ovl").hidden=false; if(view==="done")view="cart"; renderDrawer(); renderCtls(); }
 function closeD(){ if(view==="checkout")readForm(); $("drawer").hidden=true;$("ovl").hidden=true; renderCtls(); }
-function submit(){
-  readForm(); const e={};
-  if(form.name.split(/\s+/).filter(Boolean).length<2) e.name="Familiya va ismingizni to'liq yozing.";
-  if(form.phone.replace(/\D/g,"").length!==12) e.phone="Raqamni to'liq kiriting: +998 va 9 ta raqam.";
-  if(form.type==="delivery"&&form.addr.length<5) e.addr="Yetkazish manzilini yozing: tuman, ko'cha, uy.";
-  if(Object.keys(e).length){renderDrawer(e); const bad=document.querySelector(".f.bad input"); if(bad)bad.focus(); return}
-  lastOrder={...form,no:"M-"+String(Date.now()).slice(-5),total:total(),lines:Object.entries(cart).map(([k,q])=>[ITEMS[k].name,q,ITEMS[k].price*q])};
-  cart={};save();view="done";renderDrawer();renderCtls();
-}
 document.addEventListener("click",ev=>{
   const t=ev.target.closest("[data-inc],[data-dec],[data-open],[data-close],[data-go],[data-submit],#back,#ovl"); if(!t)return;
   if(t.dataset.inc){const k=t.dataset.inc;cart[k]=(cart[k]||0)+1;bump(); if($("drawer").hidden)toast(ITEMS[k].name+" savatga qo'shildi")}
@@ -546,7 +572,78 @@ document.addEventListener("input",ev=>{ if(ev.target.id==="f-phone") ev.target.v
 document.addEventListener("change",ev=>{ if(ev.target.name==="type"){readForm();form.type=ev.target.value;renderDrawer()} if(ev.target.name==="pay")form.pay=ev.target.value; });
 document.addEventListener("keydown",ev=>{ if(ev.key==="Escape"&&!$("drawer").hidden)closeD(); });
 
-(async function boot(){await loadMenu();buildItems();cleanCart();renderMenu();renderCtls();
+
+/* ===== FILIALLAR ===== */
+const BRANCHES=[
+ {id:"yunusobod",name:"Yunusobod",city:"Toshkent",phone:"+998990400094",ph:"+998 99 040-00-94",x:230,y:110,lat:41.364,lng:69.289},
+ {id:"fargona",name:"Farg'ona",city:"Farg'ona viloyati",phone:"+998956244400",ph:"+998 95 624-44-00",x:430,y:225,lat:40.384,lng:71.784},
+ {id:"andijon",name:"Andijon",city:"Andijon viloyati",phone:"+998934031404",ph:"+998 93 403-14-04",x:535,y:165,lat:40.783,lng:72.344}];
+let branch=null,bsel=null;
+try{const b=localStorage.getItem("mx_branch");branch=BRANCHES.find(x=>x.id===b)||null}catch(e){}
+function setBranch(b){branch=b;try{localStorage.setItem("mx_branch",b.id)}catch(e){}
+  $("bpick").hidden=true;document.body.style.overflow="";updChip();
+  if(!$("drawer").hidden)renderDrawer();toast(b.name+" filiali tanlandi")}
+function updChip(){let c=$("bchip");if(!c){c=document.createElement("button");c.id="bchip";c.className="bchip";c.setAttribute("data-bpick","");$("hcart").before(c)}
+  c.innerHTML=ic("pin")+(branch?esc(branch.name):"Filial tanlang")}
+function km(a,b,c,d){const r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 12742*Math.asin(Math.sqrt(h))}
+function openBranch(){
+  bsel=bsel||branch||BRANCHES[0];const p=$("bpick");p.hidden=false;document.body.style.overflow="hidden";
+  p.innerHTML=`<div class="in"><h2>Qaysi filial sizga qulay?</h2><p class="sub">Buyurtmangiz shu filialga boradi va operator o'sha yerdan qo'ng'iroq qiladi.</p>
+  <svg class="bmap" viewBox="0 0 640 340" role="group" aria-label="Filiallar xaritasi (sxema)">
+   <defs><pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="var(--brand)" opacity=".35"/></pattern></defs>
+   <rect width="640" height="340" fill="url(#dots)"/>
+   <path class="land" d="M28 170C40 100 120 60 200 70C260 30 340 55 400 90C470 70 560 95 612 140C625 190 570 215 520 220C470 270 380 290 330 265C270 300 170 290 110 250C60 240 25 215 28 170Z"/>
+   <ellipse cx="480" cy="195" rx="95" ry="40" fill="none" stroke="var(--brand-deep)" stroke-dasharray="2 6" opacity=".6" transform="rotate(-18 480 195)"/>
+   <text class="tag" x="395" y="285">FARG'ONA VODIYSI</text>
+   <path class="rt" d="M${BRANCHES[0].x} ${BRANCHES[0].y}Q330 120 ${BRANCHES[1].x} ${BRANCHES[1].y}"/>
+   <path class="rt" d="M${BRANCHES[1].x} ${BRANCHES[1].y}Q500 180 ${BRANCHES[2].x} ${BRANCHES[2].y}"/>
+   ${BRANCHES.map(b=>`<g class="pin${bsel.id===b.id?" on":""}" data-pin="${b.id}" tabindex="0" role="button" aria-label="${esc(b.name)} filiali"><circle class="ring" cx="${b.x}" cy="${b.y}" r="12"/><circle class="dot" cx="${b.x}" cy="${b.y}" r="11"/><circle cx="${b.x}" cy="${b.y}" r="4" fill="#fff"/><text class="lbl" x="${b.x}" y="${b.y-22}" text-anchor="middle">${esc(b.name)}</text></g>`).join("")}
+  </svg>
+  <button class="btn dark bnear" data-near>${ic("pin")}Eng yaqinini aniqlash</button>
+  <div class="bcards">${BRANCHES.map(b=>`<button class="bcard${bsel.id===b.id?" on":""}" data-pickb="${b.id}">${ic("pin")}<span><b>${esc(b.name)}</b><small>${esc(b.city)}<br><span style="white-space:nowrap">${b.ph}</span></small></span><span class="go" data-chooseb="${b.id}">Tanlash</span></button>`).join("")}</div>
+  ${branch?`<button class="btn ghost" style="margin-top:12px;color:var(--fg);border-color:var(--line)" data-bclose>Bekor qilish</button>`:""}</div>`;
+}
+document.addEventListener("click",ev=>{
+  const t=ev.target;
+  if(t.closest("[data-bpick],#bchip")){openBranch();return}
+  const ch=t.closest("[data-chooseb]");if(ch){setBranch(BRANCHES.find(b=>b.id===ch.dataset.chooseb));return}
+  const pk=t.closest("[data-pickb],[data-pin]");if(pk){bsel=BRANCHES.find(b=>b.id===(pk.dataset.pickb||pk.dataset.pin));
+    if(pk.dataset.pin){setBranch(bsel)}else{openBranch()}return}
+  if(t.closest("[data-bclose]")){$("bpick").hidden=true;document.body.style.overflow="";return}
+  if(t.closest("[data-near]")){const btn=t.closest("[data-near]");
+    if(!navigator.geolocation){toast("Joylashuvni aniqlab bo'lmadi, filialni o'zingiz tanlang");return}
+    btn.textContent="Aniqlanmoqda…";
+    navigator.geolocation.getCurrentPosition(p=>{const n=BRANCHES.map(b=>[km(p.coords.latitude,p.coords.longitude,b.lat,b.lng),b]).sort((a,b)=>a[0]-b[0])[0];
+      bsel=n[1];openBranch();toast("Eng yaqini: "+n[1].name+" (~"+Math.round(n[0])+" km)")},
+      ()=>{openBranch();toast("Ruxsat berilmadi, filialni o'zingiz tanlang")},{timeout:8000})}
+});
+document.addEventListener("keydown",ev=>{if((ev.key==="Enter"||ev.key===" ")&&ev.target.dataset&&ev.target.dataset.pin){ev.preventDefault();setBranch(BRANCHES.find(b=>b.id===ev.target.dataset.pin))}});
+async function sendOrder(o){
+  const body={order_no:o.no,branch:o.branch.id,name:o.name,phone:o.phone,type:o.type,
+    address:o.type==="delivery"?[o.addr,o.flat,o.land].filter(Boolean).join(", "):"",pay:o.pay,note:o.note||"",
+    items:o.lines.map(l=>({name:l[0],qty:l[1],sum:l[2]})),total:o.total};
+  const r=await fetch(SB_URL+"/rest/v1/orders",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+}
+async function submit(){
+  readForm();const e={};
+  if(!branch){openBranch();return}
+  if(form.name.split(/\s+/).filter(Boolean).length<2)e.name="Familiya va ismingizni to'liq yozing.";
+  if(form.phone.replace(/\D/g,"").length!==12)e.phone="Raqamni to'liq kiriting: +998 va 9 ta raqam.";
+  if(form.type==="delivery"&&form.addr.length<5)e.addr="Yetkazish manzilini yozing: tuman, ko'cha, uy.";
+  if(Object.keys(e).length){renderDrawer(e);const bad=document.querySelector(".f.bad input");if(bad)bad.focus();return}
+  let last=0;try{last=+localStorage.getItem("mx_last")||0}catch(_){}
+  if(Date.now()-last<30000){toast("Buyurtma yuborildi. Iltimos, biroz kuting");return}
+  const btn=document.querySelector("[data-submit]");btn.disabled=true;btn.textContent="Yuborilmoqda…";
+  const o={...form,branch,no:"M-"+String(Date.now()).slice(-5),total:total(),lines:Object.entries(cart).map(([k,q])=>[ITEMS[k].name,q,ITEMS[k].price*q])};
+  try{await sendOrder(o)}catch(err){
+    renderDrawer();const m=document.createElement("p");m.className="note";m.style.color="var(--err)";
+    m.innerHTML=`Buyurtma yuborilmadi. Iltimos, qayta urinib ko'ring yoki <a href="tel:${branch.phone}">${branch.ph}</a> raqamiga qo'ng'iroq qiling.`;$("dfoot").prepend(m);return}
+  try{localStorage.setItem("mx_last",Date.now())}catch(_){}
+  lastOrder=o;cart={};save();view="done";renderDrawer();renderCtls();
+}
+
+(async function boot(){await loadMenu();buildItems();cleanCart();renderMenu();renderCtls();updChip();if(!branch)openBranch();
 $("fhours").textContent=CFG.hours; $("chours").textContent=CFG.hours; $("cphone").textContent=CFG.phone; $("hphone").textContent=CFG.phone; $("caddr").textContent=CFG.address;
 
 if("IntersectionObserver" in window){
